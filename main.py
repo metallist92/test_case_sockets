@@ -56,10 +56,11 @@ class SocketServer:
     def is_threshold_excess(self, client_ip):
         # Проверяем запрос без токена на превышение количества попыток
         # Чтобы более точно соблюсти условие ограничения запросов в минуту - проверяем количества за каждую секунду последней минуты и суммируем
-        counter_key = f'threshold_{client_ip}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        current_datetime = datetime.datetime.now()
+        counter_key = f'threshold_{client_ip}_{current_datetime.strftime("%Y-%m-%d_%H-%M-%S")}'
         self.memcached_client.add(counter_key, 0, expire=60)
         self.memcached_client.incr(counter_key, 1)
-        older_keys = [f'threshold_{client_ip}_{(datetime.datetime.now()-datetime.timedelta(seconds=count)).strftime("%Y-%m-%d_%H-%M-%S")}' for count in range(60)]
+        older_keys = [f'threshold_{client_ip}_{(current_datetime-datetime.timedelta(seconds=count)).strftime("%Y-%m-%d_%H-%M-%S")}' for count in range(60)]
         old_memcached_counters = self.memcached_client.get_multi(tuple(older_keys))
         ip_rate = 0
         for old_cached_counter in old_memcached_counters:
