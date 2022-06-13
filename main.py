@@ -13,10 +13,12 @@ class SocketServer:
         self.rate_limit = 60
 
     def return_memcached_client(self):
+        # Создаем инстанс клиента memcached
         memcached_client = base.Client(('localhost', 11211))
         return memcached_client
 
     def return_socket_server_instance(self):
+        # Создаем инстанс сокетсервера
         socket_server_ip = '0.0.0.0'
         socket_server_port = 8080
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,6 +29,7 @@ class SocketServer:
         return server_socket
 
     def run(self):
+        # Запуск цикла листенера, прерывание по ctrl+C
         while True:
             try:
                 client_socket, addr = self.socket_server.accept()
@@ -41,21 +44,18 @@ class SocketServer:
                 continue
 
     def get_response(self, client_ip, request):
+        # Отдаем подходящий response в зависимости от условий
         token = self.return_request_token(request)
         response = None
         if token:
-            if token in self.tokens:
-                response = Response.OK
-            else:
-                response = Response.FORBIDDEN
+            response = Response.OK if token in self.tokens else Response.FORBIDDEN
         else:
-            if not self.is_threshold_excess(client_ip):
-                response = Response.NOT_AUTHORIZED
-            else:
-                response = Response.TO_MANY_REQUESTS
+            response = Response.TO_MANY_REQUESTS if self.is_threshold_excess(client_ip) else Response.TO_MANY_REQUESTS
         return response.encode()
 
     def is_threshold_excess(self, client_ip):
+        # Проверяем запрос без токена на превышение количества попыток
+        # Чтобы более точно соблюсти условие ограничения запросов в минуту - проверяем количества за каждую секунду последней минуты и суммируем
         counter_key = f'threshold_{client_ip}_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         self.memcached_client.add(counter_key, 0, expire=60)
         self.memcached_client.incr(counter_key, 1)
@@ -64,9 +64,7 @@ class SocketServer:
         ip_rate = 0
         for old_cached_counter in old_memcached_counters:
             ip_rate += int(old_memcached_counters.get(old_cached_counter))
-        if ip_rate > self.rate_limit:
-            return True
-        return False
+        return True if ip_rate > self.rate_limit else False
 
     def read_tokens(self):
         tokens = ()
