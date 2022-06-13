@@ -50,7 +50,7 @@ class SocketServer:
         if token:
             response = Response.OK if token in self.tokens else Response.FORBIDDEN
         else:
-            response = Response.TO_MANY_REQUESTS if self.is_threshold_excess(client_ip) else Response.TO_MANY_REQUESTS
+            response = Response.TO_MANY_REQUESTS if self.is_threshold_excess(client_ip) else Response.NOT_AUTHORIZED
         return response.encode()
 
     def is_threshold_excess(self, client_ip):
